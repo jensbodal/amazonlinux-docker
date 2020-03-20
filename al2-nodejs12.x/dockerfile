@@ -1,0 +1,40 @@
+# Updated March 19, 2020
+
+ARG AL_IMAGE=amazonlinux:2
+ARG NODE_VERSION=12.16.1
+
+##########################################################################
+# Build node for AmazonLinux2
+##########################################################################
+FROM ${AL_IMAGE} AS al2-node12-builder
+
+ARG NODE_VERSION
+ENV NODE_VERSION ${NODE_VERSION}
+
+RUN yum install -y \
+  gzip \
+  tar \
+  which
+
+RUN export NODE_FOLDER_NAME="node-v${NODE_VERSION}-linux-x64" && \
+  export NODE_FILENAME="${NODE_FOLDER_NAME}.tar.gz" && \
+  curl https://nodejs.org/dist/v${NODE_VERSION}/${NODE_FILENAME} -L -o "/tmp/$NODE_FILENAME" && \
+  tar zxvf "/tmp/${NODE_FILENAME}" -C /tmp && \
+  mkdir -p /fakeroot/usr/local/bin && \
+  mkdir -p /fakeroot/usr/local/lib && \
+  cd "/tmp/${NODE_FOLDER_NAME}" && \
+  cp -a bin/node /fakeroot/usr/local/bin && \
+  cp -a bin/npm /fakeroot/usr/local/bin && \
+  cp -a bin/npx /fakeroot/usr/local/bin && \
+  cp -aR lib/node_modules /fakeroot/usr/local/lib
+
+##########################################################################
+# "Base" AmazonLinux2 node docker image
+##########################################################################
+FROM ${AL_IMAGE} AS al2-nodejs12.x
+
+ENV PATH=${PATH}:/opt/bin
+
+COPY --from=al2-node12-builder /fakeroot /
+
+WORKDIR /opt/nodejs
